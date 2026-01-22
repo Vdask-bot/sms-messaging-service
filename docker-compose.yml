@@ -11,5 +11,35 @@ services:
     volumes:
       - sms_pgdata:/var/lib/postgresql/data
 
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.1
+    container_name: sms-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.1
+    container_name: sms-kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"     # OUTSIDE (host)
+      - "29092:29092"   # INSIDE (docker network)
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: "sms-zookeeper:2181"
+
+      KAFKA_LISTENERS: "INSIDE://0.0.0.0:29092,OUTSIDE://0.0.0.0:9092"
+      KAFKA_ADVERTISED_LISTENERS: "INSIDE://sms-kafka:29092,OUTSIDE://localhost:9092"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT"
+      KAFKA_INTER_BROKER_LISTENER_NAME: "INSIDE"
+
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+
 volumes:
   sms_pgdata:

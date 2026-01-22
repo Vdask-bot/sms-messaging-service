@@ -8,6 +8,9 @@ import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import jakarta.inject.Inject;
+import org.eclipse.microprofile.reactive.messaging.Channel;
+import org.eclipse.microprofile.reactive.messaging.Emitter;
 
 import java.time.Instant;
 import java.util.List;
@@ -17,6 +20,10 @@ import java.util.Optional;
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
 public class MessageResource {
+
+    @Inject
+    @Channel("sms-out")
+    Emitter<Long> smsOut;
 
     @POST
     @Transactional
@@ -30,6 +37,7 @@ public class MessageResource {
         message.createdAt = Instant.now();
 
         message.persist();
+        smsOut.send(message.id);
 
         return Response
                 .status(Response.Status.CREATED)
