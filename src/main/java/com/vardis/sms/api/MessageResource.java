@@ -9,8 +9,7 @@ import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.inject.Inject;
-import org.eclipse.microprofile.reactive.messaging.Channel;
-import org.eclipse.microprofile.reactive.messaging.Emitter;
+import com.vardis.sms.kafka.SmsEventPublisher;
 
 import java.time.Instant;
 import java.util.List;
@@ -22,8 +21,7 @@ import java.util.Optional;
 public class MessageResource {
 
     @Inject
-    @Channel("sms-out")
-    Emitter<Long> smsOut;
+    SmsEventPublisher publisher;
 
     @POST
     @Transactional
@@ -37,7 +35,7 @@ public class MessageResource {
         message.createdAt = Instant.now();
 
         message.persist();
-        smsOut.send(message.id);
+        publisher.publishMessageCreated(message.id);
 
         return Response
                 .status(Response.Status.CREATED)
@@ -97,10 +95,9 @@ public class MessageResource {
             return null;
         }
 
-        // trim και αφαίρεση whitespace
+        // trim and remove whitespace
         String normalized = value.trim().replaceAll("\\s+", "");
 
-        // αν ξεκινάει με digit, πρόσθεσε +
         if (!normalized.startsWith("+")) {
             normalized = "+" + normalized;
         }
