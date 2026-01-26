@@ -43,4 +43,41 @@ class MessageResourceTest {
         verify(publisher, times(1)).publishMessageCreated(id);
         verifyNoMoreInteractions(publisher);
     }
+
+    @Test
+    void get_unknownId_returns404_withDescriptiveError() {
+        given()
+                .when()
+                .get("/messages/999999")
+                .then()
+                .statusCode(404)
+                .body("error", equalTo("NOT_FOUND"))
+                .body("status", equalTo(404))
+                .body("message", containsString("not found"))
+                .body("path", containsString("messages/999999"));
+    }
+
+    @Test
+    void post_invalidMessage_returns400_withValidationDetails() {
+        String body = """
+    {
+      "sourceNumber": "+35799123456",
+      "destinationNumber": "123",
+      "content": ""
+    }
+    """;
+
+        given()
+                .contentType("application/json")
+                .body(body)
+                .when()
+                .post("/messages")
+                .then()
+                .statusCode(400)
+                .body("error", equalTo("VALIDATION_ERROR"))
+                .body("status", equalTo(400))
+                .body("message", notNullValue());
+    }
+
+
 }

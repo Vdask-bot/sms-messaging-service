@@ -10,6 +10,7 @@ import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.NotFoundException;
 
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
@@ -106,9 +107,7 @@ public class MessageResource {
         Optional<MessageEntity> message = MessageEntity.findByIdOptional(id);
 
         if (message.isEmpty()) {
-            return Response
-                    .status(Response.Status.NOT_FOUND)
-                    .build();
+            throw new NotFoundException("Message with id=" + id + " not found");
         }
 
         return Response.ok(message.get()).build();
