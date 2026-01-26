@@ -1,15 +1,20 @@
 package com.vardis.sms.api;
 
+import com.vardis.sms.kafka.SmsEventPublisher;
 import com.vardis.sms.message.MessageEntity;
 import com.vardis.sms.message.MessageStatus;
 import io.quarkus.panache.common.Sort;
+import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import jakarta.inject.Inject;
-import com.vardis.sms.kafka.SmsEventPublisher;
+
+import org.eclipse.microprofile.openapi.annotations.Operation;
+import org.eclipse.microprofile.openapi.annotations.tags.Tag;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
 
 import java.time.Instant;
 import java.util.List;
@@ -18,6 +23,7 @@ import java.util.Optional;
 @Path("/messages")
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
+@Tag(name = "Messages", description = "Endpoints for sending and retrieving SMS messages")
 public class MessageResource {
 
     @Inject
@@ -25,6 +31,14 @@ public class MessageResource {
 
     @POST
     @Transactional
+    @Operation(
+            summary = "Send a new message",
+            description = "Creates a message with status PENDING and publishes an event for asynchronous processing."
+    )
+    @APIResponses({
+            @APIResponse(responseCode = "201", description = "Message created"),
+            @APIResponse(responseCode = "400", description = "Validation error")
+    })
     public Response sendMessage(@Valid SendMessageRequest request) {
 
         MessageEntity message = new MessageEntity();
@@ -44,6 +58,11 @@ public class MessageResource {
     }
 
     @GET
+    @Operation(
+            summary = "List messages",
+            description = "Returns messages filtered by optional query params: sourceNumber, destinationNumber, and status. Results are ordered by createdAt descending."
+    )
+    @APIResponse(responseCode = "200", description = "List of messages")
     public List<MessageEntity> listMessages(
             @QueryParam("sourceNumber") String sourceNumber,
             @QueryParam("destinationNumber") String destinationNumber,
@@ -77,6 +96,11 @@ public class MessageResource {
 
     @GET
     @Path("/{id}")
+    @Operation(summary = "Get message by id", description = "Returns a single message by its database id.")
+    @APIResponses({
+            @APIResponse(responseCode = "200", description = "Message found"),
+            @APIResponse(responseCode = "404", description = "Message not found")
+    })
     public Response getMessageById(@PathParam("id") Long id) {
 
         Optional<MessageEntity> message = MessageEntity.findByIdOptional(id);
@@ -95,7 +119,6 @@ public class MessageResource {
             return null;
         }
 
-        // trim and remove whitespace
         String normalized = value.trim().replaceAll("\\s+", "");
 
         if (!normalized.startsWith("+")) {
@@ -105,4 +128,3 @@ public class MessageResource {
         return normalized;
     }
 }
-
