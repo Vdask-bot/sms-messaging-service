@@ -1,88 +1,200 @@
-# sms-messaging-service
+# SMS Messaging Service
 
-This project uses Quarkus, the Supersonic Subatomic Java Framework.
+A microservice implemented in **Java (Quarkus)** that simulates an SMS messaging platform.  
+The system demonstrates RESTful API design, validation, asynchronous processing, persistence, and testing.
 
-If you want to learn more about Quarkus, please visit its website: <https://quarkus.io/>.
+---
 
-## Running the application in dev mode
+## Architecture Overview
 
-You can run your application in dev mode that enables live coding using:
+The application provides the following functionality:
 
-```shell script
-./mvnw quarkus:dev
+- **REST endpoints** to:
+  - Send SMS messages
+  - Retrieve a message by ID
+  - **Search and list stored messages**
+- **Synchronous validation** of message parameters:
+  - Source number
+  - Destination number
+  - Message content
+- **Asynchronous message processing** using Kafka
+- **Message delivery simulation** resulting in:
+  - `DELIVERED`
+  - `FAILED`
+- **Persistence** of messages and status updates in PostgreSQL
+- **Descriptive error handling** with structured error responses
+
+### Message Flow
+
+1. Client submits an SMS via REST API
+2. Input is validated synchronously
+3. Message is stored in PostgreSQL with status `PENDING`
+4. A message-created event is published to Kafka
+5. A Kafka consumer simulates delivery
+6. Message status is updated to `DELIVERED` or `FAILED`
+
+---
+
+## Technology Stack
+
+- Java 17
+- Quarkus
+- Apache Kafka
+- PostgreSQL
+- Hibernate ORM (Panache)
+- Docker & Docker Compose
+- JUnit 5 & Mockito
+- OpenAPI / Swagger UI
+
+---
+
+## Running the System Locally
+
+### Prerequisites
+
+- Docker
+- Docker Compose
+
+### Start all services
+
+From the project root:
+
+```bash
+docker compose up --build
+````
+
+This starts:
+
+* PostgreSQL
+* Zookeeper
+* Kafka
+* SMS Messaging Service
+
+API base URL:
+
+```
+http://localhost:8080
 ```
 
-> **_NOTE:_**  Quarkus now ships with a Dev UI, which is available in dev mode only at <http://localhost:8080/q/dev/>.
+Swagger UI:
 
-## Packaging and running the application
-
-The application can be packaged using:
-
-```shell script
-./mvnw package
+```
+http://localhost:8080/q/swagger-ui
 ```
 
-It produces the `quarkus-run.jar` file in the `target/quarkus-app/` directory.
-Be aware that it’s not an _über-jar_ as the dependencies are copied into the `target/quarkus-app/lib/` directory.
+---
 
-The application is now runnable using `java -jar target/quarkus-app/quarkus-run.jar`.
+## API Endpoints
 
-If you want to build an _über-jar_, execute the following command:
+### Send SMS
 
-```shell script
-./mvnw package -Dquarkus.package.jar.type=uber-jar
+**POST** `/messages`
+
+```json
+{
+  "sourceNumber": "+306900000000",
+  "destinationNumber": "+306900000001",
+  "content": "Hello SMS"
+}
 ```
 
-The application, packaged as an _über-jar_, is now runnable using `java -jar target/*-runner.jar`.
+Response contains the created message with status `PENDING`.
 
-## Creating a native executable
+---
 
-You can create a native executable using:
+### Get Message by ID
 
-```shell script
-./mvnw package -Dnative
+**GET** `/messages/{id}`
+
+Returns the stored message or a `404 NOT FOUND` error.
+
+---
+
+### List / Search Messages
+
+**GET** `/messages`
+
+Messages can be **listed and filtered** using optional query parameters:
+
+* `sourceNumber`
+* `destinationNumber`
+* `status`
+
+Example:
+
+```
+GET /messages?sourceNumber=+306900000000&status=DELIVERED
 ```
 
-Or, if you don't have GraalVM installed, you can run the native executable build in a container using:
+Results are ordered by creation time (descending).
 
-```shell script
-./mvnw package -Dnative -Dquarkus.native.container-build=true
+---
+
+## Validation & Error Handling
+
+* Input validation is enforced using Bean Validation
+* Invalid requests return `400 BAD REQUEST`
+* Missing resources return `404 NOT FOUND`
+* Errors follow a consistent, descriptive JSON structure
+
+---
+
+## Testing
+
+### Automated Tests
+
+Unit and resource tests are implemented using **JUnit 5** and **Mockito**.
+
+Run tests locally:
+
+```bash
+./mvnw test
 ```
 
-You can then execute your native executable with: `./target/sms-messaging-service-1.0.0-SNAPSHOT-runner`
+Tests cover:
 
-If you want to learn more about building native executables, please consult <https://quarkus.io/guides/maven-tooling>.
+* REST API behavior
+* Validation rules
+* Error responses
+* Kafka publisher interactions (mocked)
 
-## Related Guides
+---
 
-- REST ([guide](https://quarkus.io/guides/rest)): A Jakarta REST implementation utilizing build time processing and Vert.x. This extension is not compatible with the quarkus-resteasy extension, or any of the extensions that depend on it.
-- Hibernate Validator ([guide](https://quarkus.io/guides/validation)): Validate object properties (field, getter) and method parameters for your beans (REST, CDI, Jakarta Persistence)
-- SmallRye OpenAPI ([guide](https://quarkus.io/guides/openapi-swaggerui)): Document your REST APIs with OpenAPI - comes with Swagger UI
-- REST Jackson ([guide](https://quarkus.io/guides/rest#json-serialisation)): Jackson serialization support for Quarkus REST. This extension is not compatible with the quarkus-resteasy extension, or any of the extensions that depend on it
-- Messaging - Kafka Connector ([guide](https://quarkus.io/guides/kafka-getting-started)): Connect to Kafka with Reactive Messaging
-- Hibernate ORM with Panache ([guide](https://quarkus.io/guides/hibernate-orm-panache)): Simplify your persistence code for Hibernate ORM via the active record or the repository pattern
-- JDBC Driver - PostgreSQL ([guide](https://quarkus.io/guides/datasource)): Connect to the PostgreSQL database via JDBC
+### Manual / Integration Testing
 
-## Provided Code
+End-to-end behavior can be tested by running the system with Docker Compose and using:
 
-### Hibernate ORM
+* Swagger UI
+* Postman / curl
 
-Create your first JPA entity
+Service logs:
 
-[Related guide section...](https://quarkus.io/guides/hibernate-orm)
+```bash
+docker compose logs -f sms-service
+```
 
-[Related Hibernate with Panache section...](https://quarkus.io/guides/hibernate-orm-panache)
+---
+
+## Stopping the System
+
+Stop services:
+
+```bash
+docker compose down
+```
+
+Stop services and remove volumes (clean database):
+
+```bash
+docker compose down -v
+```
+
+---
+
+## Notes
+
+* The service is designed to run in **production mode** inside Docker
+* Java version used: **Java 17**
+* Kafka connectivity is configured for Docker networking
 
 
-### Messaging codestart
-
-Use Quarkus Messaging
-
-[Related Apache Kafka guide section...](https://quarkus.io/guides/kafka-reactive-getting-started)
-
-
-### REST
-
-Easily start your REST Web Services
-
-[Related guide section...](https://quarkus.io/guides/getting-started-reactive#reactive-jax-rs-resources)
