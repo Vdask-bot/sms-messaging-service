@@ -20,7 +20,7 @@ The application provides the following functionality:
 - **Asynchronous message processing** using Kafka
 - **Message delivery simulation** resulting in:
   - `DELIVERED`
-  - `FAILED`
+  - `FAILED` (with failure reason)
 - **Persistence** of messages and status updates in PostgreSQL
 - **Descriptive error handling** with structured error responses
 

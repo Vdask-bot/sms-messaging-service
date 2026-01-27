@@ -28,4 +28,7 @@ public class MessageEntity extends PanacheEntity{
     @Column(nullable = false)
     public Instant createdAt;
 
+    @Column
+    public String failureReason;
+
 }

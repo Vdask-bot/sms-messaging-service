@@ -53,18 +53,33 @@ public class SmsStatusProcessor {
 
         boolean delivered = ThreadLocalRandom.current().nextInt(100) < 85;
 
-        LOG.infof(
-                "SMS delivery simulation completed for messageId=%d. Result=%s",
-                messageId,
-                delivered ? "DELIVERED" : "FAILED"
-        );
+        if (delivered) {
+            message.status = MessageStatus.DELIVERED;
+            message.failureReason = null;
+        } else {
+            message.status = MessageStatus.FAILED;
+            message.failureReason = randomFailureReason();
+        }
 
-        message.status = delivered ? MessageStatus.DELIVERED : MessageStatus.FAILED;
-
         LOG.infof(
-                "Message id=%d updated in database with status=%s",
+                "Message id=%d updated in database with status=%s%s",
                 messageId,
-                message.status
+                message.status,
+                message.failureReason != null
+                        ? " (reason=" + message.failureReason + ")"
+                        : ""
         );
     }
+
+    private String randomFailureReason() {
+        String[] reasons = {
+                "NETWORK_TIMEOUT",
+                "DESTINATION_UNREACHABLE",
+                "PROVIDER_ERROR"
+        };
+        return reasons[
+                ThreadLocalRandom.current().nextInt(reasons.length)
+                ];
+    }
 }
+
